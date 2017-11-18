@@ -17,7 +17,7 @@ use bincode::{serialize, deserialize, Infinite};
 fn main() {
     use config::load;
     use std::path::Path;
-    
+
     let mut db = DB::open_default(".coded.db").unwrap();
     let routes = routes![index];
     rocket::ignite().mount("/", routes).manage(db).launch();
