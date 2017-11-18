@@ -1,0 +1,6 @@
+.vscode
+/target/
+**/*.rs.bk
+
+# Test db
+.coded.db
