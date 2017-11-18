@@ -1,0 +1,14 @@
+[package]
+name = "coded"
+version = "0.1.0"
+authors = ["Coleman McFarland <coleman.mcfarland@gmail.com>"]
+
+[dependencies]
+rocket = "0.3.3"
+rocket_codegen = "0.3.3"
+rocksdb = "0.8.1"
+serde_derive = "*"
+bincode = "*"
+serde = "*"
+toml = "0.4"
+
