@@ -1,9 +1,15 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+#![allow(unused_imports)]
+#![allow(unused_must_use)]
+#![allow(dead_code)]
 
+extern crate bincode;
+#[allow(dead_code)]
 extern crate rocket;
 extern crate rocksdb;
-extern crate bincode;
 #[macro_use]
 extern crate serde_derive;
 
@@ -12,20 +18,47 @@ use std::ops::Add;
 use rocksdb::DB;
 use rocket::State;
 
-use bincode::{serialize, deserialize, Infinite};
+use std::thread;
+use std::sync::{Mutex, Arc};
+
+use bincode::{deserialize, serialize, Infinite};
+
+mod config;
 
 fn main() {
-    use config::load;
-    use std::path::Path;
+    let conf = config::load();
+    let conf_arc = Arc::new(Mutex::new(conf));
 
+    // Open the DB, wrap in atomic referenced-counted pointer,
+    // clone the pointer twice: once for the background thread, 
+    // and again for our call to manage.
     let mut db = DB::open_default(".coded.db").unwrap();
+    let db_arc = Arc::new(db);
+    let db_background = db_arc.clone();
+    let db_managed = db_arc.clone();
+
+    // background thread
+    thread::spawn(move || {
+        watch(db_background, conf_arc);
+    });
+
     let routes = routes![index];
-    rocket::ignite().mount("/", routes).manage(db).launch();
+    rocket::ignite()
+        .mount("/", routes)
+        .manage(db_managed)
+        .launch();
+}
+
+fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
+    use std::time::Duration;
+    loop {
+        thread::sleep(Duration::from_secs(15));
+    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct Entity  {
-    name: String, 
+struct Entity {
+    name: String,
     age: i32,
 }
 
@@ -33,35 +66,31 @@ struct Entity  {
 struct World(Vec<Entity>);
 
 #[get("/")]
-fn index(db: State<DB>) -> String {
-
-    // Now we know how to serialize/deserialize.
-
-    let me = Entity{name: String::from("coleman"), age: 33};
+fn index(db: State<Arc<DB>>) -> String {
+    let me = Entity {
+        name: String::from("coleman"),
+        age: 33,
+    };
     let encoded: Vec<u8> = serialize(&me, Infinite).unwrap();
     let k = "k2";
     db.put(k.as_bytes(), encoded.as_slice());
 
     let name = {
-    match db.get(k.as_bytes()) {
-        Ok(Some(db_vec)) => {
-            let decoded: Entity = deserialize(&db_vec[..]).unwrap();
-            let name = decoded.name.as_str();
-            String::from("Hello, world! ").add(name).add(" specifically")
-        },
-        _ => String::from("error!!!!")
-    }
-
+        match db.get(k.as_bytes()) {
+            Ok(Some(db_vec)) => {
+                let decoded: Entity = deserialize(&db_vec[..]).unwrap();
+                let name = decoded.name.as_str();
+                String::from("Hello, world! ")
+                    .add(name)
+                    .add(" specifically")
+            }
+            _ => String::from("error!!!!"),
+        }
     };
     name
 }
 
 
 unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts(
-        (p as *const T) as *const u8,
-        ::std::mem::size_of::<T>(),
-    )
+    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
 }
-
-

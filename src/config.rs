@@ -1,7 +1,5 @@
 extern crate toml;
 
-#[macro_use]
-extern crate serde_derive;
 
 use std::path::Path;
 use std::fs::File;
@@ -9,20 +7,28 @@ use std::io::Result;
 
 
 #[derive(Serialize, Deserialize)]
-struct Config {
-    projects: Option<Vec<Project>>
+pub struct Config {
+    projects: Option<Vec<ProjectConfig>>
 }
 
 
 #[derive(Serialize, Deserialize)]
-struct ProjectConfig {
+pub struct ProjectConfig {
     dir: String,
 }
 
-fn load(path: Path) -> io::Result<Config>{
-    let f = File::open(path)?;
+use std;
+use std::io::Read;
+use std::io;
+
+pub fn load() -> Config {
+    let base_dir = std::env::var("HOME");
+    let b1 = base_dir.unwrap();
+    let b = Path::new(&b1);
+    let path = Path::join(b, ".config/coded/coded.toml");
+    let mut f = File::open(path).expect("could not open conf file");
     let mut buffer = String::new();
-    f.read_to_string(&mut buffer)?;
-    let decoded: Config = toml::from_str(buffer)?;
+    f.read_to_string(&mut buffer).expect("could not read file");
+    let decoded: Config = toml::from_str(buffer.as_str()).expect("could not deserialize config");
     decoded
 }
