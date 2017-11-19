@@ -13,6 +13,9 @@ extern crate rocksdb;
 #[macro_use]
 extern crate serde_derive;
 
+extern crate walkdir;
+
+use walkdir::{DirEntry, WalkDir};
 
 use rocksdb::DB;
 use rocket::State;
@@ -28,6 +31,7 @@ mod config;
 
 fn main() {
     let conf = config::load();
+    println!("config: {:?}", conf);
     let conf_arc = Arc::new(Mutex::new(conf));
 
     // Open the DB, wrap in atomic referenced-counted pointer,
@@ -40,6 +44,7 @@ fn main() {
 
     // background thread
     thread::spawn(move || {
+        println!("okay!!!");
         watch(db_background, conf_arc);
     });
 
@@ -48,34 +53,78 @@ fn main() {
         .mount("/", routes)
         .manage(db_managed)
         .launch();
+    println!("huuuwhat!!!");
 }
 
 fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
     use std::time::Duration;
     // We must clone() here.
-    let unlocked = conf.lock().unwrap().clone().projects.unwrap();
+    println!("don't believe me jus watch");
+    let projects = conf.lock()
+        .expect("could not unlock conf")
+        .clone()
+        .project
+        .expect("could not unlock projects");
+    println!("projects: {:?}", projects);
     loop {
-        thread::sleep(Duration::from_secs(15));
-        unlocked.iter().map(|ref proj| {
+        thread::sleep(Duration::from_secs(3));
+        // I was using map() but I'm not "collecting" yet.
+        for proj in projects.iter() {
             let mut path = PathBuf::from(proj.dir.as_str());
-            if !path.exists() {
+            println!("path: {}", path.display());
+            if path.exists() {
                 // continue...
-                return;
-            }
-            match project_heuristic(path.clone()) {
-                ProjectType::Go => {}
-                ProjectType::Rust => {}
+                println!("path does not exist: {}", path.display());
+
+                match project_heuristic(path.clone()) {
+                    ProjectType::Go => {
+                        analyze_go(&mut path, db.clone());
+                    }
+                    ProjectType::Rust => {}
+                };
             };
-        });
+        }
     }
 }
 
-enum ProjectType {
+pub enum ProjectType {
     Rust,
     Go,
 }
 
-fn project_heuristic(mut p: PathBuf) -> ProjectType {
+fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
+    // ignore vendor
+    // count number of .go files and the len of each
+    println!("wow!");
+    let walker = WalkDir::new(path).into_iter();
+    for entry in walker.filter_entry(|e| !is_hidden(e) && golang_files(e)) {
+        // only walking Go files now...
+        let entry = entry.unwrap();
+        println!("{}", entry.path().display());
+    }
+}
+
+
+fn is_hidden(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.starts_with("."))
+        .unwrap_or(false)
+}
+
+fn golang_files(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        // only Go files and no vendor dir
+        .map(|s| s != "vendor" && s.ends_with(".go"))
+        .unwrap_or(false)
+}
+
+
+// TODO test this in /tests as an integration test
+pub fn project_heuristic(mut p: PathBuf) -> ProjectType {
     // TODO: make this better
     p.push("Cargo.toml");
     if p.exists() {

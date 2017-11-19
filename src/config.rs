@@ -1,18 +1,16 @@
 extern crate toml;
 
-
 use std::path::Path;
 use std::fs::File;
 use std::io::Result;
 
-
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Config {
-    pub projects: Option<Vec<ProjectConfig>>
+    pub project: Option<Vec<ProjectConfig>>,
 }
 
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProjectConfig {
     pub dir: String,
 }

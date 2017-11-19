@@ -11,4 +11,4 @@ serde_derive = "*"
 bincode = "*"
 serde = "*"
 toml = "0.4"
-
+walkdir = "2"
