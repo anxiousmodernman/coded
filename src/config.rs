@@ -6,15 +6,15 @@ use std::fs::File;
 use std::io::Result;
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
-    projects: Option<Vec<ProjectConfig>>
+    pub projects: Option<Vec<ProjectConfig>>
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ProjectConfig {
-    dir: String,
+    pub dir: String,
 }
 
 use std;
