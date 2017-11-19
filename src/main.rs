@@ -13,13 +13,14 @@ extern crate rocksdb;
 #[macro_use]
 extern crate serde_derive;
 
-use std::ops::Add;
 
 use rocksdb::DB;
 use rocket::State;
 
+use std::path::{Path, PathBuf};
+use std::ops::Add;
 use std::thread;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};
 
@@ -30,7 +31,7 @@ fn main() {
     let conf_arc = Arc::new(Mutex::new(conf));
 
     // Open the DB, wrap in atomic referenced-counted pointer,
-    // clone the pointer twice: once for the background thread, 
+    // clone the pointer twice: once for the background thread,
     // and again for our call to manage.
     let mut db = DB::open_default(".coded.db").unwrap();
     let db_arc = Arc::new(db);
@@ -51,10 +52,39 @@ fn main() {
 
 fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
     use std::time::Duration;
+    // We must clone() here.
+    let unlocked = conf.lock().unwrap().clone().projects.unwrap();
     loop {
         thread::sleep(Duration::from_secs(15));
+        unlocked.iter().map(|ref proj| {
+            let mut path = PathBuf::from(proj.dir.as_str());
+            if !path.exists() {
+                // continue...
+                return;
+            }
+            match project_heuristic(path.clone()) {
+                ProjectType::Go => {}
+                ProjectType::Rust => {}
+            };
+        });
     }
 }
+
+enum ProjectType {
+    Rust,
+    Go,
+}
+
+fn project_heuristic(mut p: PathBuf) -> ProjectType {
+    // TODO: make this better
+    p.push("Cargo.toml");
+    if p.exists() {
+        ProjectType::Rust
+    } else {
+        ProjectType::Go
+    }
+}
+
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct Entity {
