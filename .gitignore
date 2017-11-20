@@ -4,3 +4,7 @@
 
 # Test db
 .coded.db
+
+# IntelliJ
+.idea
+
