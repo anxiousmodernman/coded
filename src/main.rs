@@ -7,16 +7,16 @@
 #![allow(dead_code)]
 
 extern crate bincode;
-#[allow(dead_code)]
-extern crate rocket;
+#[allow(dead_code)] extern crate rocket;
 extern crate rocksdb;
-#[macro_use]
-extern crate serde_derive;
+extern crate serde;
+#[macro_use] extern crate serde_derive;
 
 extern crate walkdir;
 
 use walkdir::{DirEntry, WalkDir};
 
+use serde::de::Deserialize;
 use rocksdb::DB;
 use rocket::State;
 
@@ -124,7 +124,7 @@ fn golang_files(entry: &DirEntry) -> bool {
 
 // TODO test this in /tests as an integration test
 pub fn project_heuristic(mut p: PathBuf) -> ProjectType {
-    // TODO: make this better
+    // TODO: make this better...
     p.push("Cargo.toml");
     if p.exists() {
         ProjectType::Rust
@@ -143,6 +143,26 @@ struct Entity {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct World(Vec<Entity>);
 
+trait GetAs {
+    fn get_as<'a, T>(&self, key: & 'a str) -> Result<T, String> where T: Deserialize<'a>;
+}
+
+impl GetAs for DB {
+    fn get_as<'a, T>(&self, key: & 'a str) -> Result<T, String> where T: Deserialize<'a> {
+
+        let result = self.get(key.as_bytes())
+            .map_err(|e| format!("{:?}", e))
+            .and_then(|v| match v {
+                Some(vec) => Ok(vec.as_bytes()),
+                _ => Err(format!("Could not find key '{}' in DB", key)),
+            });
+        let value = deserialize(result.unwrap())
+//            .map(|v| Box::new(v))
+            .map_err(|e| format!("{:?}", e));
+        value
+    }
+}
+
 #[get("/")]
 fn index(db: State<Arc<DB>>) -> String {
     let me = Entity {
@@ -153,17 +173,14 @@ fn index(db: State<Arc<DB>>) -> String {
     let k = "k2";
     db.put(k.as_bytes(), encoded.as_slice());
 
+    let decoded: Box<Entity> = db.get_as(k).unwrap();
+    let value = decoded.as_ref();
+
     let name = {
-        match db.get(k.as_bytes()) {
-            Ok(Some(db_vec)) => {
-                let decoded: Entity = deserialize(&db_vec[..]).unwrap();
-                let name = decoded.name.as_str();
-                String::from("Hello, world! ")
-                    .add(name)
-                    .add(" specifically")
-            }
-            _ => String::from("error!!!!"),
-        }
+        let name = decoded.name.as_str();
+        String::from("Hello, world! ")
+            .add(name)
+            .add(" specifically")
     };
     name
 }
