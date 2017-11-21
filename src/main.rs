@@ -7,11 +7,12 @@
 #![allow(dead_code)]
 
 extern crate bincode;
-#[allow(dead_code)] extern crate rocket;
+#[allow(dead_code)]
+extern crate rocket;
 extern crate rocksdb;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
-
+#[macro_use]
+extern crate serde_derive;
 extern crate walkdir;
 
 use walkdir::{DirEntry, WalkDir};
@@ -134,7 +135,7 @@ pub fn project_heuristic(mut p: PathBuf) -> ProjectType {
 }
 
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 struct Entity {
     name: String,
     age: i32,
@@ -143,24 +144,29 @@ struct Entity {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct World(Vec<Entity>);
 
+use std::ops::Deref;
+use std::rc::Rc;
+
 trait GetAs {
-    fn get_as<'a, T>(&self, key: & 'a str) -> Result<T, String> where T: Deserialize<'a>;
+    fn get_as<'a, T>(&self, key: &str) -> Result<T, String> 
+    where
+        T: Deserialize<'a> + Clone;
 }
 
 impl GetAs for DB {
-    fn get_as<'a, T>(&self, key: & 'a str) -> Result<T, String> where T: Deserialize<'a> {
-
-        let result = self.get(key.as_bytes())
-            .map_err(|e| format!("{:?}", e))
-            .and_then(|v| match v {
-                Some(vec) => Ok(vec.as_bytes()),
-                _ => Err(format!("Could not find key '{}' in DB", key)),
-            });
-        let value = deserialize(result.unwrap())
-//            .map(|v| Box::new(v))
-            .map_err(|e| format!("{:?}", e));
-        value
-    }
+    fn get_as<'a, T>(&self, key: &str) -> Result<T, String> 
+    where
+        T: Deserialize<'a> + Clone,
+    {
+        match self.get(key.as_bytes()) {
+            Ok(None) => Err(format!{"DB returned None"}),
+            Err(e) => Err(format!("{:?}", e)),
+            Ok(Some(db_vec)) => {
+                let decoded: T = deserialize(&db_vec[..]).unwrap();
+                Ok(decoded.clone())
+            },
+        }
+    } 
 }
 
 #[get("/")]
@@ -173,8 +179,8 @@ fn index(db: State<Arc<DB>>) -> String {
     let k = "k2";
     db.put(k.as_bytes(), encoded.as_slice());
 
-    let decoded: Box<Entity> = db.get_as(k).unwrap();
-    let value = decoded.as_ref();
+    let decoded: Entity = db.get_as(k).unwrap();
+    //let value = decoded.as_ref();
 
     let name = {
         let name = decoded.name.as_str();
