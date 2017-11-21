@@ -17,9 +17,10 @@ extern crate walkdir;
 
 use walkdir::{DirEntry, WalkDir};
 
-use serde::de::{Deserialize, DeserializeOwned};
+use serde::de::Deserialize;
 use rocksdb::DB;
 use rocket::State;
+use db::GetAs;
 
 use std::path::{Path, PathBuf};
 use std::ops::Add;
@@ -29,6 +30,7 @@ use std::sync::{Arc, Mutex};
 use bincode::{deserialize, serialize, Infinite};
 
 mod config;
+mod db;
 
 fn main() {
     let conf = config::load();
@@ -139,28 +141,6 @@ pub fn project_heuristic(mut p: PathBuf) -> ProjectType {
 struct Entity {
     name: String,
     age: i32,
-}
-
-trait GetAs {
-    fn get_as<T>(&self, key: &str) -> Result<T, String>
-    where
-        T: DeserializeOwned;
-}
-
-impl GetAs for DB {
-    fn get_as<T>(&self, key: &str) -> Result<T, String>
-    where
-        T: DeserializeOwned,
-    {
-        match self.get(key.as_bytes()) {
-            Ok(None) => Err(format!{"DB returned None"}),
-            Err(e) => Err(format!("{:?}", e)),
-            Ok(Some(db_vec)) => {
-                let decoded: T = deserialize(&db_vec[..]).unwrap();
-                Ok(decoded)
-            }
-        }
-    }
 }
 
 #[get("/")]
