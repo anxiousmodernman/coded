@@ -17,7 +17,7 @@ extern crate walkdir;
 
 use walkdir::{DirEntry, WalkDir};
 
-use serde::de::Deserialize;
+use serde::de::{Deserialize, DeserializeOwned};
 use rocksdb::DB;
 use rocket::State;
 
@@ -141,32 +141,26 @@ struct Entity {
     age: i32,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct World(Vec<Entity>);
-
-use std::ops::Deref;
-use std::rc::Rc;
-
 trait GetAs {
-    fn get_as<'a, T>(&self, key: &str) -> Result<T, String> 
+    fn get_as<T>(&self, key: &str) -> Result<T, String>
     where
-        T: Deserialize<'a> + Clone;
+        T: DeserializeOwned;
 }
 
 impl GetAs for DB {
-    fn get_as<'a, T>(&self, key: &str) -> Result<T, String> 
+    fn get_as<T>(&self, key: &str) -> Result<T, String>
     where
-        T: Deserialize<'a> + Clone,
+        T: DeserializeOwned,
     {
         match self.get(key.as_bytes()) {
             Ok(None) => Err(format!{"DB returned None"}),
             Err(e) => Err(format!("{:?}", e)),
             Ok(Some(db_vec)) => {
                 let decoded: T = deserialize(&db_vec[..]).unwrap();
-                Ok(decoded.clone())
-            },
+                Ok(decoded)
+            }
         }
-    } 
+    }
 }
 
 #[get("/")]
@@ -180,7 +174,6 @@ fn index(db: State<Arc<DB>>) -> String {
     db.put(k.as_bytes(), encoded.as_slice());
 
     let decoded: Entity = db.get_as(k).unwrap();
-    //let value = decoded.as_ref();
 
     let name = {
         let name = decoded.name.as_str();
