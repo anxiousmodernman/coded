@@ -7,20 +7,20 @@
 #![allow(dead_code)]
 
 extern crate bincode;
-#[allow(dead_code)]
 extern crate rocket;
 extern crate rocksdb;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate walkdir;
+extern crate coded;
 
 use walkdir::{DirEntry, WalkDir};
 
 use serde::de::Deserialize;
 use rocksdb::DB;
 use rocket::State;
-use db::GetAs;
+use coded::db::GetAs;
 
 use std::path::{Path, PathBuf};
 use std::ops::Add;
@@ -29,11 +29,10 @@ use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};
 
-use project::{analyze_go, guess_type, Project, File};
+use coded::project::{analyze_go, guess_type, Project};
+use coded::project;
+use coded::config;
 
-mod config;
-mod db;
-mod project;
 
 fn main() {
     let conf = config::load();

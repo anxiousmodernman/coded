@@ -1,7 +1,13 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::fs::File;
 use rocksdb::DB;
-use walkdir::{WalkDir, DirEntry};
+use walkdir::{DirEntry, WalkDir};
+use std::io;
+use std::io::{BufRead, BufReader};
+use std::str::FromStr;
+use std::ffi::OsStr;
+
 
 // TODO test this in /tests as an integration test
 pub fn guess_type(mut p: PathBuf) -> ProjectType {
@@ -19,14 +25,35 @@ pub enum ProjectType {
     Go,
 }
 
-pub struct Project {
-    files: Vec<File>
+pub struct Project {}
+
+pub struct FileInfo {
+    pub path: String,
+    pub lines: i32,
+    pub extension: String,
 }
 
-pub struct File {
-    path: String,
-    lines: i32,
+impl FileInfo {
+    pub fn from_path(path: &Path) -> Result<FileInfo, io::Error> {
+        let file = File::open(path)?;
+        let mut count = 0;
+        for line in BufReader::new(file).lines() {
+            count += count;
+        }
+        let p = path.to_str().expect("could not render path");
+        let e = match path.extension() {
+            Some(ext) => ext.to_os_string().into_string().unwrap(),
+            _ => String::default(),
+        };
+        let file_info = FileInfo {
+            path: String::from_str(p).unwrap(),
+            lines: count,
+            extension: e,
+        };
+        Ok(file_info)
+    }
 }
+
 
 
 pub fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
