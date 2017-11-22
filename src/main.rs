@@ -62,8 +62,7 @@ fn main() {
 
 fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
     use std::time::Duration;
-    // We must clone() here.
-    println!("don't believe me jus watch");
+    // We must clone() here?
     let projects = conf.lock()
         .expect("could not unlock conf")
         .clone()
@@ -75,7 +74,6 @@ fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
         // I was using map() but I'm not "collecting" yet.
         for proj in projects.iter() {
             let mut path = PathBuf::from(proj.dir.as_str());
-            println!("path: {}", path.display());
             if path.exists() {
                 // continue...
                 match project::guess_type(path.clone()) {

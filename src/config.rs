@@ -20,10 +20,8 @@ use std::io::Read;
 use std::io;
 
 pub fn load() -> Config {
-    let base_dir = std::env::var("HOME");
-    let b1 = base_dir.unwrap();
-    let b = Path::new(&b1);
-    let path = Path::join(b, ".config/coded/coded.toml");
+    let base_dir = std::env::var("HOME").expect("could not get HOME env var");
+    let path = Path::join(Path::new(&base_dir), ".config/coded/coded.toml");
     let mut f = File::open(path).expect("could not open conf file");
     let mut buffer = String::new();
     f.read_to_string(&mut buffer).expect("could not read file");
