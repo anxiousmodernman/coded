@@ -37,8 +37,9 @@ impl FileInfo {
     pub fn from_path(path: &Path) -> Result<FileInfo, io::Error> {
         let file = File::open(path)?;
         let mut count = 0;
-        for line in BufReader::new(file).lines() {
-            count += count;
+        let mut reader = BufReader::new(file);
+        for line in reader.lines() {
+            count += 1;
         }
         let p = path.to_str().expect("could not render path");
         let e = match path.extension() {
