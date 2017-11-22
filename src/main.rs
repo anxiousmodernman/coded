@@ -7,13 +7,13 @@
 #![allow(dead_code)]
 
 extern crate bincode;
+extern crate coded;
 extern crate rocket;
 extern crate rocksdb;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate walkdir;
-extern crate coded;
 
 use walkdir::{DirEntry, WalkDir};
 
@@ -24,7 +24,6 @@ use coded::db::GetAs;
 
 use std::path::{Path, PathBuf};
 use std::ops::Add;
-use std::thread;
 use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};
@@ -32,6 +31,9 @@ use bincode::{deserialize, serialize, Infinite};
 use coded::project::{analyze_go, guess_type, Project};
 use coded::project;
 use coded::config;
+use std::thread;
+
+mod background;
 
 
 fn main() {
@@ -50,7 +52,7 @@ fn main() {
     // background thread
     thread::spawn(move || {
         println!("okay!!!");
-        watch(db_background, conf_arc);
+        background::watch(db_background, conf_arc);
     });
 
     let routes = routes![index];
@@ -58,33 +60,6 @@ fn main() {
         .mount("/", routes)
         .manage(db_managed)
         .launch();
-}
-
-fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
-    use std::time::Duration;
-    // We must clone() here?
-    let projects = conf.lock()
-        .expect("could not unlock conf")
-        .clone()
-        .project
-        .expect("could not unlock projects");
-    println!("projects: {:?}", projects);
-    loop {
-        thread::sleep(Duration::from_secs(3));
-        // I was using map() but I'm not "collecting" yet.
-        for proj in projects.iter() {
-            let mut path = PathBuf::from(proj.dir.as_str());
-            if path.exists() {
-                // continue...
-                match project::guess_type(path.clone()) {
-                    project::ProjectType::Go => {
-                        analyze_go(&mut path, db.clone());
-                    }
-                    project::ProjectType::Rust => {}
-                };
-            };
-        }
-    }
 }
 
 
