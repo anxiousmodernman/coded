@@ -30,7 +30,11 @@ use std::sync::{Arc, Mutex};
 use bincode::{deserialize, serialize, Infinite};
 
 mod config;
+mod controllers;
+mod models;
 mod db;
+
+use models::ProjectType;
 
 fn main() {
     let conf = config::load();
@@ -51,7 +55,7 @@ fn main() {
         watch(db_background, conf_arc);
     });
 
-    let routes = routes![index];
+    let routes = routes![controllers::index];
     rocket::ignite()
         .mount("/", routes)
         .manage(db_managed)
@@ -87,11 +91,6 @@ fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
     }
 }
 
-pub enum ProjectType {
-    Rust,
-    Go,
-}
-
 fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
     // ignore vendor
     // count number of .go files and the len of each
@@ -109,16 +108,14 @@ fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
 
 
 fn is_hidden(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
+    entry.file_name()
         .to_str()
         .map(|s| s.starts_with("."))
         .unwrap_or(false)
 }
 
 fn golang_files(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
+    entry.file_name()
         .to_str()
         .map(|s| s != "vendor")
         .unwrap_or(false)
@@ -134,34 +131,6 @@ pub fn project_heuristic(mut p: PathBuf) -> ProjectType {
     } else {
         ProjectType::Go
     }
-}
-
-
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-struct Entity {
-    name: String,
-    age: i32,
-}
-
-#[get("/")]
-fn index(db: State<Arc<DB>>) -> String {
-    let me = Entity {
-        name: String::from("coleman"),
-        age: 33,
-    };
-    let encoded: Vec<u8> = serialize(&me, Infinite).unwrap();
-    let k = "k2";
-    db.put(k.as_bytes(), encoded.as_slice());
-
-    let decoded: Entity = db.get_as(k).unwrap();
-
-    let name = {
-        let name = decoded.name.as_str();
-        String::from("Hello, world! ")
-            .add(name)
-            .add(" specifically")
-    };
-    name
 }
 
 
