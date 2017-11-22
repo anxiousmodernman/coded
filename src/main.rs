@@ -38,7 +38,6 @@ mod background;
 
 fn main() {
     let conf = config::load();
-    println!("config: {:?}", conf);
     let conf_arc = Arc::new(Mutex::new(conf));
 
     // Open the DB, wrap in atomic referenced-counted pointer,
@@ -49,9 +48,7 @@ fn main() {
     let db_background = db_arc.clone();
     let db_managed = db_arc.clone();
 
-    // background thread
     thread::spawn(move || {
-        println!("okay!!!");
         background::watch(db_background, conf_arc);
     });
 
@@ -89,5 +86,3 @@ fn index(db: State<Arc<DB>>) -> String {
     };
     name
 }
-
-
