@@ -29,6 +29,8 @@ use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};
 
+use project::{analyze_go, guess_type, Project, File};
+
 mod config;
 mod db;
 mod project;
@@ -86,39 +88,6 @@ fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
             };
         }
     }
-}
-
-
-fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
-    // ignore vendor
-    // count number of .go files and the len of each
-    println!("wow!");
-    let walker = WalkDir::new(path).into_iter();
-    for entry in walker.filter_entry(|e| !is_hidden(e) && golang_files(e)) {
-        // only walking Go files now...
-        let entry = entry.unwrap();
-        println!("name: {:?}, path: {:?}", entry.file_name(), entry.path());
-
-        // naive impl:
-        // "get" file repr from database
-    }
-}
-
-
-fn is_hidden(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| s.starts_with("."))
-        .unwrap_or(false)
-}
-
-fn golang_files(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| s != "vendor")
-        .unwrap_or(false)
 }
 
 
