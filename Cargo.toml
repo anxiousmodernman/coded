@@ -12,3 +12,4 @@ bincode = "*"
 serde = "*"
 toml = "0.4"
 walkdir = "2"
+maud = { version = "*", features = ["rocket"] }
