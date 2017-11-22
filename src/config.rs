@@ -19,6 +19,7 @@ use std;
 use std::io::Read;
 use std::io;
 
+/// Loads a Config from the environment, or panics.
 pub fn load() -> Config {
     let base_dir = std::env::var("HOME").expect("could not get HOME env var");
     let path = Path::join(Path::new(&base_dir), ".config/coded/coded.toml");
