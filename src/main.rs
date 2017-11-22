@@ -31,6 +31,7 @@ use bincode::{deserialize, serialize, Infinite};
 
 mod config;
 mod db;
+mod project;
 
 fn main() {
     let conf = config::load();
@@ -76,21 +77,17 @@ fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
             println!("path: {}", path.display());
             if path.exists() {
                 // continue...
-                match project_heuristic(path.clone()) {
-                    ProjectType::Go => {
+                match project::guess_type(path.clone()) {
+                    project::ProjectType::Go => {
                         analyze_go(&mut path, db.clone());
                     }
-                    ProjectType::Rust => {}
+                    project::ProjectType::Rust => {}
                 };
             };
         }
     }
 }
 
-pub enum ProjectType {
-    Rust,
-    Go,
-}
 
 fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
     // ignore vendor
@@ -122,18 +119,6 @@ fn golang_files(entry: &DirEntry) -> bool {
         .to_str()
         .map(|s| s != "vendor")
         .unwrap_or(false)
-}
-
-
-// TODO test this in /tests as an integration test
-pub fn project_heuristic(mut p: PathBuf) -> ProjectType {
-    // TODO: make this better...
-    p.push("Cargo.toml");
-    if p.exists() {
-        ProjectType::Rust
-    } else {
-        ProjectType::Go
-    }
 }
 
 
