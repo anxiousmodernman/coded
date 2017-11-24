@@ -7,7 +7,7 @@
 #![allow(dead_code)]
 
 extern crate bincode;
-#[allow(dead_code)]
+extern crate coded;
 extern crate rocket;
 extern crate rocksdb;
 extern crate serde;
@@ -20,24 +20,24 @@ use walkdir::{DirEntry, WalkDir};
 use serde::de::Deserialize;
 use rocksdb::DB;
 use rocket::State;
-use db::GetAs;
+use coded::db::GetAs;
 
 use std::path::{Path, PathBuf};
 use std::ops::Add;
-use std::thread;
 use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};
 
-use project::{analyze_go, guess_type, Project, File};
+use coded::project::{analyze_go, guess_type, Project};
+use coded::project;
+use coded::config;
+use std::thread;
 
-mod config;
-mod db;
-mod project;
+mod background;
+
 
 fn main() {
     let conf = config::load();
-    println!("config: {:?}", conf);
     let conf_arc = Arc::new(Mutex::new(conf));
 
     // Open the DB, wrap in atomic referenced-counted pointer,
@@ -48,10 +48,8 @@ fn main() {
     let db_background = db_arc.clone();
     let db_managed = db_arc.clone();
 
-    // background thread
     thread::spawn(move || {
-        println!("okay!!!");
-        watch(db_background, conf_arc);
+        background::watch(db_background, conf_arc);
     });
 
     let routes = routes![index];
@@ -59,35 +57,6 @@ fn main() {
         .mount("/", routes)
         .manage(db_managed)
         .launch();
-}
-
-fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
-    use std::time::Duration;
-    // We must clone() here.
-    println!("don't believe me jus watch");
-    let projects = conf.lock()
-        .expect("could not unlock conf")
-        .clone()
-        .project
-        .expect("could not unlock projects");
-    println!("projects: {:?}", projects);
-    loop {
-        thread::sleep(Duration::from_secs(3));
-        // I was using map() but I'm not "collecting" yet.
-        for proj in projects.iter() {
-            let mut path = PathBuf::from(proj.dir.as_str());
-            println!("path: {}", path.display());
-            if path.exists() {
-                // continue...
-                match project::guess_type(path.clone()) {
-                    project::ProjectType::Go => {
-                        analyze_go(&mut path, db.clone());
-                    }
-                    project::ProjectType::Rust => {}
-                };
-            };
-        }
-    }
 }
 
 
@@ -116,9 +85,4 @@ fn index(db: State<Arc<DB>>) -> String {
             .add(" specifically")
     };
     name
-}
-
-
-unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::std::slice::from_raw_parts((p as *const T) as *const u8, ::std::mem::size_of::<T>())
 }

@@ -1,7 +1,18 @@
 [package]
 name = "coded"
 version = "0.1.0"
-authors = ["Coleman McFarland <coleman.mcfarland@gmail.com>"]
+authors = [
+    "Coleman McFarland <coleman.mcfarland@gmail.com>",
+    "Jeff May <jeff.n.may@gmail.com>"
+]
+
+[lib]
+name = "coded"
+path = "src/lib.rs"
+
+[[bin]]
+name = "coded"
+path = "src/main.rs"
 
 [dependencies]
 rocket = "0.3.3"
