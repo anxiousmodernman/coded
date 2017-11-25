@@ -19,3 +19,15 @@ impl GetAs for DB {
         }
     }
 }
+
+
+#[derive(Debug, Clone)]
+pub struct Key(Vec<u8>);
+
+impl Key {
+    pub fn new(bytes: &[u8]) -> Key {
+        Key(bytes.to_vec())
+    }
+
+}
+
