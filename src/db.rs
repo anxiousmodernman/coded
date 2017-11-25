@@ -28,6 +28,19 @@ impl Key {
     pub fn new(bytes: &[u8]) -> Key {
         Key(bytes.to_vec())
     }
-
 }
 
+//impl KeyComponent for Key {
+//    fn join(&self, c: KeyComponent) -> Key {
+//        unimplemented!()
+//    }
+//
+//    fn as_bytes(&self) -> &[u8] {
+//        unimplemented!()
+//    }
+//}
+//
+//pub trait KeyComponent {
+//    fn join(&self, c: KeyComponent) -> Key;
+//    fn as_bytes(&self) -> &[u8];
+//}
