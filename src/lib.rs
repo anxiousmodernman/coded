@@ -13,9 +13,10 @@ extern crate serde;
 extern crate serde_derive;
 extern crate walkdir;
 extern crate rocket;
+extern crate chrono;
 
 // we must do our mods in src/lib.rs
-// so that we can use cargo's integartion testing
+// so that we can use cargo's integration testing
 
 pub mod config;
 pub mod db;

@@ -1,8 +1,11 @@
-extern crate rocksdb;
+// we don't need extern crate here
+// we can do that in lib.rs instead
 
+use chrono::prelude::*;
 use serde::de::Deserialize;
 use rocksdb::{DB, DBVector};
 use bincode::{deserialize, serialize, Infinite};
+use std::convert::From;
 
 pub trait GetAs {
     fn get_as<T>(&self, key: &str) -> Result<T, String> where for <'a>  T: Deserialize<'a>;
@@ -25,22 +28,44 @@ impl GetAs for DB {
 pub struct Key(Vec<u8>);
 
 impl Key {
-    pub fn new(bytes: &[u8]) -> Key {
-        Key(bytes.to_vec())
+    pub fn join(&self, mut k: Key) -> Key {
+        let mut left: Vec<u8> = self.0.clone();
+        let mut right: Vec<u8> = k.0;
+        left.append(&mut right);
+        Key(left)
     }
 }
 
-//impl KeyComponent for Key {
-//    fn join(&self, c: KeyComponent) -> Key {
-//        unimplemented!()
-//    }
-//
-//    fn as_bytes(&self) -> &[u8] {
-//        unimplemented!()
-//    }
+impl Into<Vec<u8>> for Key  {
+    fn into(self) -> Vec<u8> {
+        self.0
+    }
+}
+
+impl<'a> From<&'a str> for Key {
+    fn from(val: &str) -> Self {
+        Key(val.as_bytes().to_vec())
+    }
+}
+
+impl From<String> for Key {
+    fn from(val: String) -> Self {
+        Key(val.as_bytes().to_vec())
+    }
+}
+
+impl From<DateTime<Utc>> for Key {
+    fn from(val: DateTime<Utc>) -> Self {
+        Key(val.to_string().as_bytes().to_vec())
+    }
+}
+
+//macro_rules! make_list {
+//    () => (
+//        None
+//    );
+//    ($x:expr $(, $more:expr)*) => (
+//        Node::new($x, make_list!($($more),*))
+//    );
 //}
-//
-//pub trait KeyComponent {
-//    fn join(&self, c: KeyComponent) -> Key;
-//    fn as_bytes(&self) -> &[u8];
-//}
+
