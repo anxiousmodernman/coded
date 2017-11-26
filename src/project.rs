@@ -8,8 +8,6 @@ use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::ffi::OsStr;
 
-
-// TODO test this in /tests as an integration test
 pub fn guess_type(mut p: PathBuf) -> ProjectType {
     // TODO: make this better...
     p.push("Cargo.toml");
@@ -54,8 +52,6 @@ impl FileInfo {
         Ok(file_info)
     }
 }
-
-
 
 pub fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
     // ignore vendor

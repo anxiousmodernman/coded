@@ -6,6 +6,7 @@
 #![allow(unused_must_use)]
 #![allow(dead_code)]
 
+// extern crate for our library can be centralized here
 extern crate bincode;
 extern crate rocksdb;
 extern crate serde;
@@ -13,9 +14,10 @@ extern crate serde;
 extern crate serde_derive;
 extern crate walkdir;
 extern crate rocket;
+extern crate chrono;
 
 // we must do our mods in src/lib.rs
-// so that we can use cargo's integartion testing
+// so that we can use cargo's integration testing
 
 pub mod config;
 pub mod db;

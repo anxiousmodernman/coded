@@ -24,3 +24,6 @@ serde = "*"
 toml = "0.4"
 walkdir = "2"
 maud = { version = "*", features = ["rocket"] }
+iso8601 = "0.2.0"
+chrono = "0.4"
+tempdir = "*"

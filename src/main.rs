@@ -7,6 +7,8 @@
 #![allow(dead_code)]
 
 extern crate bincode;
+
+#[macro_use]
 extern crate coded;
 extern crate rocket;
 extern crate rocksdb;
@@ -18,9 +20,8 @@ extern crate walkdir;
 use walkdir::{DirEntry, WalkDir};
 
 use serde::de::Deserialize;
-use rocksdb::DB;
+use rocksdb::{DB, DBIterator, IteratorMode};
 use rocket::State;
-use coded::db::GetAs;
 
 use std::path::{Path, PathBuf};
 use std::ops::Add;
@@ -32,6 +33,9 @@ use coded::project::{analyze_go, guess_type, Project};
 use coded::project;
 use coded::config;
 use std::thread;
+
+
+use coded::db::{GetAs, Key};
 
 mod background;
 
@@ -73,8 +77,8 @@ fn index(db: State<Arc<DB>>) -> String {
         age: 33,
     };
     let encoded: Vec<u8> = serialize(&me, Infinite).unwrap();
-    let k = "k2";
-    db.put(k.as_bytes(), encoded.as_slice());
+    let k = make_key!("k2");
+    db.put(k.0.as_slice(), encoded.as_slice());
 
     let decoded: Entity = db.get_as(k).unwrap();
 
@@ -86,3 +90,41 @@ fn index(db: State<Arc<DB>>) -> String {
     };
     name
 }
+
+
+#[get("/random")]
+fn random(db: State<Arc<DB>>) -> String {
+    let mut iter = db.iterator(IteratorMode::Start);
+
+    String::from("Hello, world! ")
+}
+
+
+// rocksdb docstrings
+// An iterator over a database or column family, with specifiable
+// ranges and direction.
+//
+// ```
+// use rocksdb::{DB, Direction, IteratorMode};
+//
+// let mut db = DB::open_default("path/for/rocksdb/storage2").unwrap();
+// let mut iter = db.iterator(IteratorMode::Start); // Always iterates forward
+// for (key, value) in iter {
+//     println!("Saw {:?} {:?}", key, value);
+// }
+// iter = db.iterator(IteratorMode::End);  // Always iterates backward
+// for (key, value) in iter {
+//     println!("Saw {:?} {:?}", key, value);
+// }
+// iter = db.iterator(IteratorMode::From(b"my key", Direction::Forward)); // From a key in Direction::{forward,reverse}
+// for (key, value) in iter {
+//     println!("Saw {:?} {:?}", key, value);
+// }
+//
+// // You can seek with an existing Iterator instance, too
+// iter = db.iterator(IteratorMode::Start);
+// iter.set_mode(IteratorMode::From(b"another key", Direction::Reverse));
+// for (key, value) in iter {
+//     println!("Saw {:?} {:?}", key, value);
+// }
+// ```
