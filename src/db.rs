@@ -56,6 +56,12 @@ impl From<DateTime<Utc>> for Key {
     }
 }
 
+impl From<Box<[u8]>> for Key {
+    fn from(val: Box<[u8]>) -> Self {
+        Key(val.to_vec())
+    }
+}
+
 impl From<Date<Utc>> for Key {
     /// Here from adds in zero-values for hour, minute, second to let us work with a DateTime.
     ///

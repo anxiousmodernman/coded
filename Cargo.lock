@@ -52,6 +52,7 @@ dependencies = [
  "chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "iso8601 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "maud 0.17.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "maud_macros 0.17.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocket 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocket_codegen 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rocksdb 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
