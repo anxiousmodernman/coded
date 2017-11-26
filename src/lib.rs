@@ -6,6 +6,7 @@
 #![allow(unused_must_use)]
 #![allow(dead_code)]
 
+// extern crate for our library can be centralized here
 extern crate bincode;
 extern crate rocksdb;
 extern crate serde;
