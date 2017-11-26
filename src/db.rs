@@ -5,24 +5,24 @@ use bincode::{deserialize, serialize, Infinite};
 use std::convert::From;
 
 pub trait GetAs {
-    fn get_as<T>(&self, key: &str) -> Result<T, String> where for <'a>  T: Deserialize<'a>;
+    fn get_as<T>(&self, key: Key) -> Result<T, String> where for <'a>  T: Deserialize<'a>;
 }
 
 impl GetAs for DB {
-    fn get_as<T>(&self, key: &str) -> Result<T, String> where for <'a> T: Deserialize<'a> {
-        match self.get(key.as_bytes()) {
-            Ok(None) => Err(format!("Could not find key '{}' in DB", key)),
+    fn get_as<T>(&self, key: Key) -> Result<T, String> where for <'a> T: Deserialize<'a> {
+        match self.get(key.0.as_slice()) {
+            Ok(None) => Err(format!("Could not find key '{:?}' in DB", key)),
             Ok(Some(db_vec)) => deserialize(&db_vec[..]).map_err(|e|
-                format!("Error deserializing key '{}' from DB: {:?}", key, e)
+                format!("Error deserializing key '{:?}' from DB: {:?}", key, e)
             ),
-            Err(e) => Err(format!("Error fetching key '{}' from DB: {:?}", key, e)),
+            Err(e) => Err(format!("Error fetching key '{:?}' from DB: {:?}", key, e)),
         }
     }
 }
 
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Key(Vec<u8>);
+pub struct Key(pub Vec<u8>);
 
 impl Key {
     pub fn join(&self, mut k: Key) -> Key {
@@ -65,6 +65,8 @@ impl From<Date<Utc>> for Key {
     }
 }
 
+// Users of this macro must have db::Key in scope.
+#[macro_export]
 macro_rules! make_key {
     () => (
         Key::empty()

@@ -7,6 +7,8 @@
 #![allow(dead_code)]
 
 extern crate bincode;
+
+#[macro_use]
 extern crate coded;
 extern crate rocket;
 extern crate rocksdb;
@@ -20,7 +22,6 @@ use walkdir::{DirEntry, WalkDir};
 use serde::de::Deserialize;
 use rocksdb::{DB, DBIterator, IteratorMode};
 use rocket::State;
-use coded::db::GetAs;
 
 use std::path::{Path, PathBuf};
 use std::ops::Add;
@@ -32,6 +33,9 @@ use coded::project::{analyze_go, guess_type, Project};
 use coded::project;
 use coded::config;
 use std::thread;
+
+
+use coded::db::{GetAs, Key};
 
 mod background;
 
@@ -73,8 +77,8 @@ fn index(db: State<Arc<DB>>) -> String {
         age: 33,
     };
     let encoded: Vec<u8> = serialize(&me, Infinite).unwrap();
-    let k = "k2";
-    db.put(k.as_bytes(), encoded.as_slice());
+    let k = make_key!("k2");
+    db.put(k.0.as_slice(), encoded.as_slice());
 
     let decoded: Entity = db.get_as(k).unwrap();
 
