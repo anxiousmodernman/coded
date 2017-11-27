@@ -40,6 +40,7 @@ pub struct FileInfo {
 }
 
 impl FileInfo {
+    /// from_path constructs a FileInfo by inspecting the contents of the file at path.
     pub fn from_path(path: &Path) -> Result<FileInfo, io::Error> {
         println!("GETTING ONE FILE NOW {:?}", path);
         let file = File::open(path)?;
@@ -68,6 +69,7 @@ impl FileInfo {
         Ok(file_info)
     }
 
+    // TODO: this is silly.
     pub fn blank() -> FileInfo {
         FileInfo{ path: String::from("error"), lines: 0, extension: String::new() }
     }
