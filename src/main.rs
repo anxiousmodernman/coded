@@ -110,7 +110,7 @@ fn random(db: State<Arc<DB>>) -> Markup {
                 );
 
                 li (file_info.path)
-            }
+        }
     }
 }
 }
@@ -144,3 +144,14 @@ fn random(db: State<Arc<DB>>) -> Markup {
 //     println!("Saw {:?} {:?}", key, value);
 // }
 // ```
+// write batches!
+// use rocksdb::{DB, WriteBatch};
+//
+// let db = DB::open_default("path/for/rocksdb/storage1").unwrap();
+// {
+//     let mut batch = WriteBatch::default();
+//     batch.put(b"my key", b"my value");
+//     batch.put(b"key2", b"value2");
+//     batch.put(b"key3", b"value3");
+//     db.write(batch); // Atomically commits the batch
+// }
