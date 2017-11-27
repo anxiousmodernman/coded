@@ -18,7 +18,8 @@ pub fn watch(db: Arc<DB>, conf: Arc<Mutex<config::Config>>) {
         .expect("could not unlock projects");
     println!("projects: {:?}", projects);
     loop {
-        thread::sleep(Duration::from_secs(3));
+        thread::sleep(Duration::from_secs(10));
+        println!("background start");
         // I was using map() but I'm not "collecting" yet.
         for proj in projects.iter() {
             let mut path = PathBuf::from(proj.dir.as_str());

@@ -5,8 +5,10 @@
 #![allow(unused_imports)]
 #![allow(unused_must_use)]
 #![allow(dead_code)]
+#![feature(proc_macro)]
 
 extern crate bincode;
+extern crate maud;
 
 #[macro_use]
 extern crate coded;
@@ -19,6 +21,7 @@ extern crate walkdir;
 
 use walkdir::{DirEntry, WalkDir};
 
+use maud::{html, Markup};
 use serde::de::Deserialize;
 use rocksdb::{DB, DBIterator, IteratorMode};
 use rocket::State;
@@ -29,7 +32,7 @@ use std::sync::{Arc, Mutex};
 
 use bincode::{deserialize, serialize, Infinite};
 
-use coded::project::{analyze_go, guess_type, Project};
+use coded::project::{analyze_go, guess_type, Project, FileInfo};
 use coded::project;
 use coded::config;
 use std::thread;
@@ -56,7 +59,7 @@ fn main() {
         background::watch(db_background, conf_arc);
     });
 
-    let routes = routes![index];
+    let routes = routes![index, random];
     rocket::ignite()
         .mount("/", routes)
         .manage(db_managed)
@@ -93,10 +96,23 @@ fn index(db: State<Arc<DB>>) -> String {
 
 
 #[get("/random")]
-fn random(db: State<Arc<DB>>) -> String {
+fn random(db: State<Arc<DB>>) -> Markup {
     let mut iter = db.iterator(IteratorMode::Start);
 
-    String::from("Hello, world! ")
+
+    html! {
+        h1 "Jeff May?:"
+        ol {
+            @for (k, v) in iter {
+
+                @let file_info: FileInfo = deserialize(&v[..]).unwrap_or(
+                    FileInfo::blank()
+                );
+
+                li (file_info.path)
+            }
+    }
+}
 }
 
 
