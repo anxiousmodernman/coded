@@ -1,3 +1,6 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 #[macro_use]
 extern crate coded;
 extern crate iso8601;
@@ -11,6 +14,7 @@ extern crate serde_derive;
 
 use rocksdb::*;
 use std::time;
+use std::str;
 use chrono::prelude::*;
 use tempdir::TempDir;
 use bincode::{deserialize, serialize, Infinite};
@@ -18,10 +22,15 @@ use std::path::{PathBuf, Path};
 use coded::*;
 use coded::db::Key;
 
+#[derive(Serialize, Deserialize)]
+struct Thing {
+    id: i32
+}
+
 #[test]
 fn test_sortable_key() {
     // TempDir type is auto-removed.
-    let mut db = DB::open_default(TempDir::new("test").unwrap()).unwrap();
+    let db = DB::open_default(TempDir::new("test").unwrap()).unwrap();
 
     let oct_rev = make_key!(Utc.ymd(1917, 10, 25));
     let bday = make_key!(Utc.ymd(1984, 09, 21));
@@ -66,7 +75,7 @@ fn test_sortable_key() {
 
 #[test]
 fn test_aggregation() {
-    let mut db = DB::open_default(TempDir::new("test").unwrap()).unwrap();
+    let db = DB::open_default(TempDir::new("test").unwrap()).unwrap();
 
     // Make keys with this structure
     // projects!{proj_path}!{batch_ts}!{path}
@@ -115,27 +124,38 @@ fn test_aggregation() {
     let mut iter = db.iterator(IteratorMode::Start);
 
     // expected keys in the db: 4
-    let all_keys: i32 = iter.map(|kv| 1 ).sum();
+    let all_keys = iter.count();
     assert_eq!(all_keys, 4);
 
     // We do an explicit seek to Time A, but we know that it's still the first key in the db
     iter = db.iterator(IteratorMode::From(
         make_key!("projects!", dir, "!", time_a).0.as_slice(), Direction::Forward));
 
-    let a_and_b_keys: i32 = iter.map(|kv| 1 ).sum();
+    let a_and_b_keys = iter.count();
     assert_eq!(a_and_b_keys, 4);
 
     iter = db.iterator(IteratorMode::From(
         make_key!("projects!", dir, "!", time_b).0.as_slice(), Direction::Forward));
 
-    let b_keys: i32 = iter.map(|kv| 1 ).sum();
+    let b_keys = iter.count();
     assert_eq!(b_keys, 2);
 
-    // deltas: main.c +10  main.h -10
+    // Here we extract the timestamp portions of our keys
+    iter = db.iterator(IteratorMode::Start);
+    let timestamps: Vec<String> = iter.map(get_timestamps).collect();
+    assert_eq!(timestamps.get(0).unwrap(), "2010-04-20T00:00:00+00:00");
+
+
 
 }
 
-#[derive(Serialize, Deserialize)]
-struct Thing {
-    id: i32
+fn get_timestamps(kv: (Box<[u8]>, Box<[u8]>)) -> String {
+    // We use ref to take the Box contents as a reference. This matters for &[u8].
+    let ref st = *kv.0;
+    let s = str::from_utf8(st).unwrap();
+    let splitted: Vec<&str> = s.split("!").collect();
+    let ts = splitted.get(2).expect("index 2 get");
+    String::from(*ts)
 }
+
+

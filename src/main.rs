@@ -99,9 +99,8 @@ fn index(db: State<Arc<DB>>) -> String {
 fn random(db: State<Arc<DB>>) -> Markup {
     let mut iter = db.iterator(IteratorMode::Start);
 
-
     html! {
-        h1 "Jeff May?:"
+        h2 "Projects"
         ol {
             @for (k, v) in iter {
 
