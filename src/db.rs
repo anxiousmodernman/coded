@@ -1,7 +1,8 @@
 use chrono::prelude::{Date, DateTime, Utc, TimeZone};
 use serde::de::Deserialize;
-use rocksdb::{DB, DBVector};
+use rocksdb::{DBVector, DB};
 use bincode::{deserialize, serialize, Infinite};
+
 use std::convert::From;
 
 pub trait GetAs {
