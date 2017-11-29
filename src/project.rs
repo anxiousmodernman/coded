@@ -1,5 +1,3 @@
-
-
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::fs::File;
@@ -30,7 +28,13 @@ pub enum ProjectType {
     Go,
 }
 
-pub struct Project {}
+pub struct Project {
+    files: Vec<FileInfo>
+}
+
+impl Project {
+
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileInfo {
@@ -136,4 +140,15 @@ fn golang_files(entry: &DirEntry) -> bool {
         .to_str()
         .map(|s| s != "vendor")
         .unwrap_or(false)
+}
+
+
+pub fn get_timestamps(kv: (Box<[u8]>, Box<[u8]>)) -> String {
+    use std::str;
+    // We use ref to take the Box contents as a reference. This matters for &[u8].
+    let ref st = *kv.0;
+    let s = str::from_utf8(st).unwrap();
+    let splitted: Vec<&str> = s.split("!").collect();
+    let ts = splitted.get(2).expect("index 2 get");
+    String::from(*ts)
 }
