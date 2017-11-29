@@ -9,6 +9,7 @@
 
 extern crate bincode;
 extern crate maud;
+extern crate chrono;
 
 #[macro_use]
 extern crate coded;
@@ -19,25 +20,22 @@ extern crate serde;
 extern crate serde_derive;
 extern crate walkdir;
 
-use walkdir::{DirEntry, WalkDir};
-
-use maud::{html, Markup};
-use serde::de::Deserialize;
-use rocksdb::{DB, DBIterator, IteratorMode};
-use rocket::State;
-
 use std::path::{Path, PathBuf};
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 use bincode::{deserialize, serialize, Infinite};
+use maud::{html, Markup};
+use serde::de::Deserialize;
+use rocksdb::{DB, DBIterator, IteratorMode, Direction};
+use rocket::State;
+use walkdir::{DirEntry, WalkDir};
+use chrono::{Utc, DateTime, Duration};
 
 use coded::project::{analyze_go, guess_type, Project, FileInfo};
 use coded::project;
 use coded::config;
-use std::thread;
-
-
 use coded::db::{GetAs, Key};
 
 mod background;
@@ -94,30 +92,64 @@ fn index(db: State<Arc<DB>>) -> String {
     name
 }
 
+struct ProjectView {
+    lines: i32
+}
+
 
 #[get("/random")]
 fn random(db: State<Arc<DB>>) -> Markup {
     let mut iter = db.iterator(IteratorMode::Start);
+    let mut projects: Vec<String> = iter.map(project::get_projects).collect();
+    projects.dedup();
 
+    let now = Utc::now();
+//    let then = now - Duration::hours(2);
+    let then = now - Duration::minutes(5);
+
+
+    let mut project_diffs: Vec<(String, i32)> = Vec::new();
+    for proj in projects {
+        let mut sums = Vec::new();
+        let scan_from = make_key!("projects!", proj.clone(), "!", then);
+        iter = db.iterator(IteratorMode::From(scan_from.0.as_slice(), Direction::Forward));
+        let mut batch_ids: Vec<String> = iter.map(project::get_timestamps).collect();
+        batch_ids.dedup();
+        for batch_id in batch_ids {
+            let batch = make_key!("projects!", proj.clone(), "!", batch_id);
+            iter = db.iterator(IteratorMode::From(batch.0.as_slice(), Direction::Forward));
+            let total: i32 = iter.map(project::yield_lines).sum();
+            sums.push(total);
+        }
+        let mut diffs = Vec::new();
+        let mut prev = 0;
+        for s in sums {
+            let diff = s - prev;
+            prev = s;
+            diffs.push(diff);
+        }
+        let d = diffs.into_iter().sum();
+        project_diffs.push((proj, d));
+    }
+
+    // TODO: styles
     html! {
         h2 "Projects"
         ol {
-            @for (k, v) in iter {
+            @for (p, d) in project_diffs {
 
-                @let file_info: FileInfo = deserialize(&v[..]).unwrap_or(
-                    FileInfo::blank()
-                );
-
-                li (file_info.path)
+                li { p {(p)} p {(d)} }
+            }
         }
     }
-}
 }
 
 
 // rocksdb docstrings
 // An iterator over a database or column family, with specifiable
 // ranges and direction.
+//
+// Note(cm): I think "column family" is like a bucket in boltdb
 //
 // ```
 // use rocksdb::{DB, Direction, IteratorMode};

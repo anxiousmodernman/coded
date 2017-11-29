@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::fs::File;
+use std::str;
 use rocksdb::DB;
 use walkdir::{DirEntry, WalkDir};
 use std::io;
@@ -29,12 +30,11 @@ pub enum ProjectType {
 }
 
 pub struct Project {
-    files: Vec<FileInfo>
+    path: String,
+    files: Vec<FileInfo>,
 }
 
-impl Project {
-
-}
+impl Project {}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileInfo {
@@ -46,12 +46,9 @@ pub struct FileInfo {
 impl FileInfo {
     /// from_path constructs a FileInfo by inspecting the contents of the file at path.
     pub fn from_path(path: &Path) -> Result<FileInfo, io::Error> {
-        println!("GETTING ONE FILE NOW {:?}", path);
         let file = File::open(path)?;
-        // more dumbass heuristics to avoid scanning binaries
-        println!("len {}", file.metadata().unwrap().len());
         if file.metadata().unwrap().len() > 5000000 {
-            return Ok(FileInfo::blank())
+            return Ok(FileInfo::blank());
         }
 
         let mut count = 0;
@@ -75,9 +72,12 @@ impl FileInfo {
 
     // TODO: this is silly.
     pub fn blank() -> FileInfo {
-        FileInfo{ path: String::from("error"), lines: 0, extension: String::new() }
+        FileInfo { path: String::from("error"), lines: 0, extension: String::new() }
     }
+}
 
+pub fn diff_since(then: DateTime<Utc>, db: &DB) -> Option<i32> {
+    Some(0)
 }
 
 /// FileType marks what we determine a file to be.
@@ -96,30 +96,29 @@ impl Render for FileInfo {
 
         }
     }
-
 }
-pub fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
-    println!("analysis time");
 
-    // proj is our common prefix for all analysis
+pub fn analyze_go(path: &mut PathBuf, db: Arc<DB>) {
     let proj = path.clone();
-    // batch_id is a DateTime, and will serve as our common prefix
+    // batch_id is a DateTime
     let batch_id = Utc::now();
     // count number of .go files and the len of each
     let walker = WalkDir::new(path).into_iter();
     for entry in walker.filter_entry(|e| !is_hidden(e) && golang_files(e)) {
-        // only walking Go files now...
-        println!("something happening");
         let entry = entry.expect("could not get dir entry");
         if entry.file_type().is_dir() {
-            println!("skipping analysis for dir");
+            // skip direcotries
             continue;
         }
-        println!("more stuff");
-        let k = make_key!(proj.to_str().expect("proj to string failed"), batch_id, entry.path().to_str().expect("path to string failed"));
-
-        let fi = FileInfo::from_path(entry.path()).expect("could not make fileinfo");
-        println!("fileinfo made");
+        // key: projects!{path}!{batch_id}!{entry_path}
+        let k = make_key!(
+            "projects!",
+            proj.to_str().unwrap(), 
+            "!",
+            batch_id, 
+            "!",
+            entry.path().to_str().unwrap());
+        let fi = FileInfo::from_path(entry.path()).expect("could not make FileInfo");
         let encoded: Vec<u8> = serialize(&fi, Infinite).unwrap();
         db.put(k.0.as_slice(), encoded.as_slice());
     }
@@ -144,11 +143,28 @@ fn golang_files(entry: &DirEntry) -> bool {
 
 
 pub fn get_timestamps(kv: (Box<[u8]>, Box<[u8]>)) -> String {
-    use std::str;
-    // We use ref to take the Box contents as a reference. This matters for &[u8].
     let ref st = *kv.0;
     let s = str::from_utf8(st).unwrap();
     let splitted: Vec<&str> = s.split("!").collect();
-    let ts = splitted.get(2).expect("index 2 get");
+    let ts = splitted.get(2).unwrap();
     String::from(*ts)
+}
+
+pub fn get_projects(kv: (Box<[u8]>, Box<[u8]>)) -> String {
+    let ref st = *kv.0;
+    let s = str::from_utf8(st).unwrap();
+    let splitted: Vec<&str> = s.split("!").collect();
+    match splitted.get(1) {
+        Some(ts) => String::from(*ts),
+        _ => String::from("unknown project")
+    }
+}
+
+pub fn yield_lines(kv: (Box<[u8]>, Box<[u8]>)) -> i32 {
+    let ref st = *kv.0;
+    let fi: FileInfo = match deserialize(st) {
+        Ok(x) => x,
+        _ => FileInfo::blank()
+    };
+    fi.lines
 }
