@@ -110,16 +110,19 @@ fn random(db: State<Arc<DB>>) -> Markup {
 
     let mut project_diffs: Vec<(String, i32)> = Vec::new();
     for proj in projects {
+        println!("scanning project {:?}", proj);
         let mut sums = Vec::new();
         let scan_from = make_key!("projects!", proj.clone(), "!", then);
         iter = db.iterator(IteratorMode::From(scan_from.0.as_slice(), Direction::Forward));
         let mut batch_ids: Vec<String> = iter.map(project::get_timestamps).collect();
         batch_ids.dedup();
         for batch_id in batch_ids {
-            let batch = make_key!("projects!", proj.clone(), "!", batch_id);
+            let batch = make_key!("projects!", proj.clone(), "!", batch_id.clone());
             iter = db.iterator(IteratorMode::From(batch.0.as_slice(), Direction::Forward));
             let total: i32 = iter.map(project::yield_lines).sum();
             sums.push(total);
+            println!("    batch_id {:?}   sum {:?}", batch_id, total);
+
         }
         let mut diffs = Vec::new();
         let mut prev = 0;
@@ -137,7 +140,6 @@ fn random(db: State<Arc<DB>>) -> Markup {
         h2 "Projects"
         ol {
             @for (p, d) in project_diffs {
-
                 li { p {(p)} p {(d)} }
             }
         }

@@ -161,10 +161,11 @@ pub fn get_projects(kv: (Box<[u8]>, Box<[u8]>)) -> String {
 }
 
 pub fn yield_lines(kv: (Box<[u8]>, Box<[u8]>)) -> i32 {
-    let ref st = *kv.0;
+    // we need index 1, the value
+    let ref st = *kv.1;
     let fi: FileInfo = match deserialize(st) {
         Ok(x) => x,
-        _ => FileInfo::blank()
+        _ => FileInfo{extension: String::from("blah"), lines: -1, path: String::from("/foo/baz")}
     };
     fi.lines
 }

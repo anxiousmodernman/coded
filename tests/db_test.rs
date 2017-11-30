@@ -149,7 +149,8 @@ fn test_aggregation() {
 
     // But we can get rid of dupes by collecting a HashSet
     iter = db.iterator(IteratorMode::Start);
-    let unique_timestamps: HashSet<String> = iter.map(project::get_timestamps).collect();
+    let mut unique_timestamps: Vec<String> = iter.map(project::get_timestamps).collect();
+    unique_timestamps.dedup();
     assert_eq!(unique_timestamps, vec!["2010-04-20T00:00:00+00:00", "2011-04-20T00:00:00+00:00", "2012-04-20T00:00:00+00:00"]);
 
     // But that's no good, because we can't rely on ordering in a HashSet. Let's preserve
@@ -158,7 +159,7 @@ fn test_aggregation() {
     let mut unique_sorted_ts: Vec<String> = iter.map(project::get_timestamps).collect();
     // NOTE: calling dedup on an unsorted vec is a logic error
     unique_sorted_ts.dedup();
-    assert_eq!(unique_sorted_ts, vec![]);
+    assert_eq!(unique_sorted_ts, vec!["2010-04-20T00:00:00+00:00", "2011-04-20T00:00:00+00:00", "2012-04-20T00:00:00+00:00"]);
 
     // we pick a day that lands "between" the keyspaces, e.g. "all activity since 2011-01-01".
     let before_b = make_key!("projects", dir, "!", Utc.ymd(2011, 01, 01));
