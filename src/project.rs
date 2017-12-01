@@ -54,7 +54,6 @@ impl FileInfo {
         let mut count = 0;
         let mut reader = BufReader::new(file);
         for line in reader.lines() {
-            // line is a Result<String, Error>
             count += 1;
         }
         let p = path.to_str().expect("could not render path");
@@ -70,14 +69,9 @@ impl FileInfo {
         Ok(file_info)
     }
 
-    // TODO: this is silly.
     pub fn blank() -> FileInfo {
         FileInfo { path: String::from("error"), lines: 0, extension: String::new() }
     }
-}
-
-pub fn diff_since(then: DateTime<Utc>, db: &DB) -> Option<i32> {
-    Some(0)
 }
 
 /// FileType marks what we determine a file to be.
